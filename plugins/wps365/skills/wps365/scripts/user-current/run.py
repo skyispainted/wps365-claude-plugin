@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
 查询当前用户信息：调用 GET /v7/users/current，输出 Markdown + JSON。

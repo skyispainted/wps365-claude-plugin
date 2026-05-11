@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
 多维表（DbSheet）：获取 Schema、列举/检索/创建/更新/删除记录。调用 V7 多维表接口，输出 Markdown + JSON。

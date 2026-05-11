@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
 云文档 Drive：调用 V7 Drive 接口，实现文件上传、列表、详情等功能。

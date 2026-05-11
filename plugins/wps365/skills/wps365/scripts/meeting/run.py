@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
 会议创建/查询/取消与参会人管理：调用 V7 会议接口，输出 Markdown + JSON。

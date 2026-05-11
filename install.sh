@@ -14,13 +14,13 @@ info "WPS 365 Claude Code 插件安装"
 echo ""
 
 # Check Python
-command -v python3 &>/dev/null || { error "未找到 python3"; exit 1; }
-info "Python $(python3 --version) ✓"
+command -v python &>/dev/null || { error "未找到 python"; exit 1; }
+info "Python $(python --version) ✓"
 
 # Install cryptography
-python3 -c "from cryptography.hazmat.primitives.ciphers.aead import AESGCM" 2>/dev/null || {
+python -c "from cryptography.hazmat.primitives.ciphers.aead import AESGCM" 2>/dev/null || {
     info "正在安装 cryptography ..."
-    pip3 install cryptography 2>/dev/null || pip install cryptography 2>/dev/null || python3 -m pip install cryptography || { error "安装 cryptography 失败"; exit 1; }
+    pip install cryptography 2>/dev/null || pip install cryptography 2>/dev/null || python -m pip install cryptography || { error "安装 cryptography 失败"; exit 1; }
     info "cryptography 安装完成 ✓"
 }
 
@@ -35,7 +35,7 @@ info "插件已安装到 $CC_PLUGINS_DIR/wps365 ✓"
 
 # Copy Python packages to user site-packages (so they work globally without PYTHONPATH)
 info "正在安装 Python 包 ..."
-USER_SITE=$(python3 -c "import site; print(site.getusersitepackages())")
+USER_SITE=$(python -c "import site; print(site.getusersitepackages())")
 mkdir -p "$USER_SITE"
 cp -a "$CC_PLUGINS_DIR/wps365/skills/wps365/scripts/wpsv7client" "$USER_SITE/"
 cp -a "$CC_PLUGINS_DIR/wps365/skills/wps365/scripts/wps_credential_manager" "$USER_SITE/"
@@ -43,12 +43,12 @@ info "Python 包已安装到 $USER_SITE ✓"
 
 # Verify
 info "验证安装 ..."
-python3 -c "from wpsv7client import get_current_user; print('wps365 ready')" && info "wpsv7client 可用 ✓" || { error "wpsv7client 导入失败"; exit 1; }
-python3 -m wps_credential_manager status &>/dev/null && info "凭证管理器可用 ✓" || warn "凭证管理器需首次认证"
+python -c "from wpsv7client import get_current_user; print('wps365 ready')" && info "wpsv7client 可用 ✓" || { error "wpsv7client 导入失败"; exit 1; }
+python -m wps_credential_manager status &>/dev/null && info "凭证管理器可用 ✓" || warn "凭证管理器需首次认证"
 [ -f "${HOME}/.claude/plugins/wps365/skills/wps365/SKILL.md" ] && info "SKILL.md 已注册 ✓" || error "SKILL.md 缺失"
 
 echo ""
 info "安装完成！重启 Claude Code 后 wps365 技能将自动加载。"
 echo ""
-info "首次认证: python3 -m wps_credential_manager login"
+info "首次认证: python -m wps_credential_manager login"
 echo ""

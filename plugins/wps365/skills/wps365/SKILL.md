@@ -14,7 +14,7 @@ description: WPS 365 V7 API 工具集。用于查询通讯录、管理日历日�
 **Linux / macOS:**
 
 ```bash
-python3 -c "from cryptography.hazmat.primitives.ciphers.aead import AESGCM" 2>/dev/null || pip3 install cryptography; USER_SITE=$(python3 -c "import site; print(site.getusersitepackages())"); mkdir -p "$USER_SITE"; PLUGIN_DIR=$(find ~/.claude/plugins/cache/wps365-marketplace/wps365 -maxdepth 4 -type d -name scripts 2>/dev/null | head -1); [ -n "$PLUGIN_DIR" ] && cp -a "$PLUGIN_DIR/wpsv7client" "$USER_SITE/" && cp -a "$PLUGIN_DIR/wps_credential_manager" "$USER_SITE/"; python3 -c "from wpsv7client import get_current_user; print('wps365 ready')"
+python -c "from cryptography.hazmat.primitives.ciphers.aead import AESGCM" 2>/dev/null || pip install cryptography; USER_SITE=$(python -c "import site; print(site.getusersitepackages())"); mkdir -p "$USER_SITE"; PLUGIN_DIR=$(find ~/.claude/plugins/cache/wps365-marketplace/wps365 -maxdepth 4 -type d -name scripts 2>/dev/null | head -1); [ -n "$PLUGIN_DIR" ] && cp -a "$PLUGIN_DIR/wpsv7client" "$USER_SITE/" && cp -a "$PLUGIN_DIR/wps_credential_manager" "$USER_SITE/"; python -c "from wpsv7client import get_current_user; print('wps365 ready')"
 ```
 
 **Windows PowerShell:**

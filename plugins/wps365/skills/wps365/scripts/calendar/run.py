@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
 日历与日程增删改查：调用 V7 日历/日程接口，输出 Markdown + JSON。

@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
 聊天会话 IM：调用 V7 IM 接口，实现会话列表、消息、历史消息、发送消息等功能。

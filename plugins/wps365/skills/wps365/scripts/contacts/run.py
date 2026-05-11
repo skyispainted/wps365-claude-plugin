@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
 通讯录按人名搜索：调用 V7 企业用户搜索，输出 Markdown + JSON。
