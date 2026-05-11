@@ -29,15 +29,19 @@ $USER_SITE = python -c "import site; print(site.getusersitepackages())"; if (-no
 python -m wps_credential_manager status
 ```
 
-如果显示"未配置"或"未找到凭证"，**不要询问用户**，直接运行登录：
+如果显示"已配置"，说明已有凭证，可以继续使用该技能的其他功能。
+
+如果显示"未配置"或"未找到凭证"，**先询问用户提供 app_id**：
+
+> 首次使用 WPS 365 需要认证。请提供你的 WPS 365 企业应用 App ID（格式如 `AK20260501LJGRPT`），可在 WPS 365 管理后台 → 开放平台获取。
+
+拿到 app_id 后执行：
 
 ```bash
-python -m wps_credential_manager login
+python -m wps_credential_manager login --app-id <用户提供的app_id>
 ```
 
-该命令会输出一个 URL，告知用户"请在浏览器中打开以下链接完成 WPS 登录"。登录完成后凭证会自动存储，无需额外操作。
-
-如果显示"已配置"，说明已有凭证，可以继续使用该技能的其他功能。
+该命令会输出一个 URL，告知用户"请在浏览器中打开以下链接完成 WPS 登录"。登录完成后凭证会自动存储。
 
 ## 凭证管理
 
