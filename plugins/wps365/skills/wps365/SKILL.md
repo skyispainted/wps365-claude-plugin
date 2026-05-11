@@ -41,13 +41,13 @@ python -m wps_credential_manager status
 python -m wps_credential_manager login --app-id <用户提供的app_id>
 ```
 
-该命令会输出一个 URL，告知用户"请在浏览器中打开以下链接完成 WPS 登录"。登录完成后凭证会自动存储。
+`login` 和 `refresh` 默认使用 cloud 模式（生成链接），不会受 localhost 回调问题影响。
 
 ## 凭证管理
 
 ```bash
 python -m wps_credential_manager status   # 查看当前凭证状态
-python -m wps_credential_manager refresh  # 手动刷新 token
+python -m wps_credential_manager refresh  # 手动刷新 token（默认 cloud 模式）
 python -m wps_credential_manager logout   # 清除凭证（重新登录）
 python -m wps_credential_manager test     # 测试凭证是否有效
 ```

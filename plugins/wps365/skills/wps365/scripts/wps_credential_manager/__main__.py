@@ -2,14 +2,20 @@
 """CLI 入口：python -m wps_credential_manager"""
 
 import argparse
-import json
+import io
 import sys
+import json
+
+# Windows 控制台默认编码非 UTF-8，强制设置为 UTF-8 避免中文乱码
+if sys.platform == "win32":
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8")
 
 from .manager import login, get_sid, refresh, status, logout, test_sid
 
 
 def cmd_login(args):
-    result = login(app_id=args.app_id or "", flow=args.flow or "")
+    result = login(app_id=args.app_id or "", flow=args.flow or "cloud")
     print(f"\n登录成功！用户: {result.get('nickname')} ({result.get('user_id')})")
     print("凭证已加密存储。")
 
@@ -30,7 +36,7 @@ def cmd_status(args):
 
 
 def cmd_refresh(args):
-    result = refresh(app_id="", flow=args.flow or "")
+    result = refresh(app_id="", flow=args.flow or "cloud")
     print(f"\n刷新成功！用户: {result.get('nickname')} ({result.get('user_id')})")
 
 
@@ -62,8 +68,8 @@ def main():
     sub = parser.add_subparsers(dest="command", required=True)
 
     p = sub.add_parser("login", help="OAuth 登录获取 wps_sid")
-    p.add_argument("--flow", choices=["cloud", "local"], default="",
-                   help="OAuth 模式：cloud（生成链接）/ local（localhost 回调），默认自动检测")
+    p.add_argument("--flow", choices=["cloud", "local"], default="cloud",
+                   help="OAuth 模式：cloud（生成链接）/ local（localhost 回调），默认 cloud")
     p.add_argument("--app-id", default="", help="指定 app_id（不指定则登录时输入）")
     p.set_defaults(func=cmd_login)
 
@@ -71,7 +77,7 @@ def main():
     p.set_defaults(func=cmd_status)
 
     p = sub.add_parser("refresh", help="手动刷新 wps_sid")
-    p.add_argument("--flow", choices=["cloud", "local"], default="", help="OAuth 模式")
+    p.add_argument("--flow", choices=["cloud", "local"], default="cloud", help="OAuth 模式，默认 cloud")
     p.set_defaults(func=cmd_refresh)
 
     p = sub.add_parser("logout", help="清除凭证")
