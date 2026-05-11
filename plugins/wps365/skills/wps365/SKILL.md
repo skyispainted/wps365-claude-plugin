@@ -7,39 +7,25 @@ description: WPS 365 V7 API 工具集。用于查询通讯录、管理日历日�
 
 ## ⚠️ 必须先执行初始化
 
-**在使用本技能任何功能前，必须先执行以下初始化。** 跳过此步骤会导致 `ModuleNotFoundError`。
+**在使用本技能任何功能前，必须先执行以下初始化。**
 
-### Step 1: 设置 PYTHONPATH
-
-先定位插件安装路径，设置环境变量。
+将 Python 包安装到用户 site-packages，使 `wpsv7client` 和 `wps_credential_manager` 全局可用。
 
 **Linux / macOS:**
+
 ```bash
-SCRIPTS_DIR=$(find ~/.claude/plugins/cache/wps365-marketplace/wps365 -maxdepth 4 -type d -name scripts 2>/dev/null | head -1) && [ -n "$SCRIPTS_DIR" ] && export PYTHONPATH="$SCRIPTS_DIR${PYTHONPATH:+:$PYTHONPATH}" && echo "PYTHONPATH=$SCRIPTS_DIR"
+python3 -c "from cryptography.hazmat.primitives.ciphers.aead import AESGCM" 2>/dev/null || pip3 install cryptography; USER_SITE=$(python3 -c "import site; print(site.getusersitepackages())"); mkdir -p "$USER_SITE"; PLUGIN_DIR=$(find ~/.claude/plugins/cache/wps365-marketplace/wps365 -maxdepth 4 -type d -name scripts 2>/dev/null | head -1); [ -n "$PLUGIN_DIR" ] && cp -a "$PLUGIN_DIR/wpsv7client" "$USER_SITE/" && cp -a "$PLUGIN_DIR/wps_credential_manager" "$USER_SITE/"; python3 -c "from wpsv7client import get_current_user; print('wps365 ready')"
 ```
 
 **Windows PowerShell:**
+
 ```powershell
-$SCRIPTS_DIR = Get-ChildItem -Recurse -Directory -Filter scripts -ErrorAction SilentlyContinue "$env:USERPROFILE\.claude\plugins\cache\wps365-marketplace\wps365" | Select-Object -First 1 -ExpandProperty FullName; if ($SCRIPTS_DIR) { $env:PYTHONPATH = "$SCRIPTS_DIR;$env:PYTHONPATH"; Write-Host "PYTHONPATH=$SCRIPTS_DIR" }
+$USER_SITE = python -c "import site; print(site.getusersitepackages())"; if (-not (Test-Path $USER_SITE)) { New-Item -ItemType Directory -Path $USER_SITE -Force | Out-Null }; $PLUGIN_DIR = Get-ChildItem -Recurse -Directory -Filter scripts -ErrorAction SilentlyContinue "$env:USERPROFILE\.claude\plugins\cache\wps365-marketplace\wps365" | Select-Object -First 1 -ExpandProperty FullName; if ($PLUGIN_DIR) { Copy-Item -Recurse "$PLUGIN_DIR\wpsv7client" "$USER_SITE\"; Copy-Item -Recurse "$PLUGIN_DIR\wps_credential_manager" "$USER_SITE\" }; python -c "from wpsv7client import get_current_user; print('wps365 ready')"
 ```
 
-### Step 2: 安装依赖
-
-```bash
-python -c "from cryptography.hazmat.primitives.ciphers.aead import AESGCM" 2>/dev/null || pip install cryptography
-```
-
-### Step 3: 验证
-
-```bash
-python -c "from wpsv7client import get_current_user; print('wps365 ready')"
-```
-
-看到 `wps365 ready` 后才能使用下面的功能。
+看到 `wps365 ready` 后即可使用。
 
 ## 认证（首次使用）
-
-初始化成功后，首次使用需要 WPS 账号认证：
 
 ```bash
 python -m wps_credential_manager login
@@ -76,8 +62,6 @@ if resp.get("code") == 0:
 ```python
 from wpsv7client import search_users
 resp = search_users("姓名")
-# 分页
-resp = search_users("姓名", page_size=50, page_token=resp.get("page_token"))
 ```
 
 ### 日历
@@ -85,16 +69,10 @@ resp = search_users("姓名", page_size=50, page_token=resp.get("page_token"))
 ```python
 from wpsv7client import list_calendars, list_events, create_event
 
-# 列出所有日历
 resp = list_calendars()
-cals = resp["data"]["calendars"]
-
-# 列出日程（须带时区）
 resp = list_events("calendar_id",
     start_time="2026-05-11T09:00:00+08:00",
     end_time="2026-05-12T09:00:00+08:00")
-
-# 创建日程
 resp = create_event("calendar_id",
     start_time="2026-05-11T14:00:00+08:00",
     end_time="2026-05-11T15:00:00+08:00",
@@ -107,10 +85,7 @@ resp = create_event("calendar_id",
 ```python
 from wpsv7client import list_meetings, create_meeting
 
-# 列出会议
 resp = list_meetings()
-
-# 创建会议
 resp = create_meeting(
     subject="评审会议",
     start_time="2026-05-11T14:00:00+08:00",
@@ -123,30 +98,17 @@ resp = create_meeting(
 ```python
 from wpsv7client import list_files, get_file
 
-# 列出文件（默认个人云文档）
 resp = list_files()
-resp = list_files(drive_id="private", parent_id="root")
-
-# 获取文件信息
 resp = get_file(drive_id="private", file_id="xxx")
 ```
 
 ### 多维表
 
 ```python
-from wpsv7client import (
-    dbsheet_get_schema,
-    dbsheet_list_records,
-    dbsheet_batch_create_records,
-)
+from wpsv7client import dbsheet_get_schema, dbsheet_list_records, dbsheet_batch_create_records
 
-# 获取表结构
 resp = dbsheet_get_schema("file_id")
-
-# 查询记录
 resp = dbsheet_list_records("file_id", sheet_id=1)
-
-# 批量创建记录
 records = [{"fields": {"姓名": "张三", "部门": "研发"}}]
 resp = dbsheet_batch_create_records("file_id", sheet_id=1, records=records)
 ```
@@ -156,13 +118,8 @@ resp = dbsheet_batch_create_records("file_id", sheet_id=1, records=records)
 ```python
 from wpsv7client import get_chat_list, list_chat_messages, send_message
 
-# 列出会话
 resp = get_chat_list()
-
-# 发送消息
 resp = send_message("chat_id", text="Hello")
-
-# 列出消息
 resp = list_chat_messages("chat_id")
 ```
 
