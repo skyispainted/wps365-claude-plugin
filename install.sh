@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # WPS 365 Claude Code Plugin — 一键安装脚本
-# Usage: curl -fsSL https://raw.githubusercontent.com/wps365/wps365-claude-plugin/main/install.sh | bash
+# Usage: curl -fsSL https://raw.githubusercontent.com/skyispainted/wps365-claude-plugin/main/install.sh | bash
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
