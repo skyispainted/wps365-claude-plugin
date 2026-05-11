@@ -1,0 +1,20 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "wps365-marketplace",
+  "description": "WPS 365 V7 API 插件，集成通讯录、日历、会议、云文档、多维表、IM 等企业协作能力。",
+  "owner": {
+    "name": "WPS 365 Team"
+  },
+  "plugins": [
+    {
+      "name": "wps365",
+      "description": "WPS 365 V7 API 工具集。用于查询通讯录、管理日历日程、创建会议、操作云文档、管理多维表、发送聊天消息等企业协作任务。",
+      "author": {
+        "name": "WPS 365 Team"
+      },
+      "category": "productivity",
+      "source": "./plugins/wps365",
+      "homepage": "https://www.wps.cn"
+    }
+  ]
+}

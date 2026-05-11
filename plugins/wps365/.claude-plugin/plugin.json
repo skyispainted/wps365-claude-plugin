@@ -1,0 +1,7 @@
+{
+  "name": "wps365",
+  "version": "1.0.0",
+  "description": "WPS 365 V7 API 技能工具集，集成通讯录、日历、会议、云文档、多维表、IM 等能力。",
+  "author": {"name": "WPS 365 Team"},
+  "keywords": ["wps", "365", "calendar", "meeting", "drive", "im", "contacts", "dbsheet"]
+}
