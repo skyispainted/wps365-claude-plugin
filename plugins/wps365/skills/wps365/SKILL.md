@@ -23,15 +23,21 @@ python3 -c "from cryptography.hazmat.primitives.ciphers.aead import AESGCM" 2>/d
 $USER_SITE = python -c "import site; print(site.getusersitepackages())"; if (-not (Test-Path $USER_SITE)) { New-Item -ItemType Directory -Path $USER_SITE -Force | Out-Null }; $PLUGIN_DIR = Get-ChildItem -Recurse -Directory -Filter scripts -ErrorAction SilentlyContinue "$env:USERPROFILE\.claude\plugins\cache\wps365-marketplace\wps365" | Select-Object -First 1 -ExpandProperty FullName; if ($PLUGIN_DIR) { Copy-Item -Recurse "$PLUGIN_DIR\wpsv7client" "$USER_SITE\"; Copy-Item -Recurse "$PLUGIN_DIR\wps_credential_manager" "$USER_SITE\" }; python -c "from wpsv7client import get_current_user; print('wps365 ready')"
 ```
 
-看到 `wps365 ready` 后即可使用。
+看到 `wps365 ready` 后，**立即**执行凭证检查：
 
-## 认证（首次使用）
+```bash
+python -m wps_credential_manager status
+```
+
+如果显示"未配置"或"未找到凭证"，**不要询问用户**，直接运行登录：
 
 ```bash
 python -m wps_credential_manager login
 ```
 
-浏览器中完成登录后，`wps_sid` 会自动存储并在过期时无感刷新。
+该命令会输出一个 URL，告知用户"请在浏览器中打开以下链接完成 WPS 登录"。登录完成后凭证会自动存储，无需额外操作。
+
+如果显示"已配置"，说明已有凭证，可以继续使用该技能的其他功能。
 
 ## 凭证管理
 
