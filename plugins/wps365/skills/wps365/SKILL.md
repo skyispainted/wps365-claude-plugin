@@ -125,12 +125,34 @@ resp = dbsheet_batch_create_records("file_id", sheet_id=1, records=records)
 
 ### 即时消息
 
-```python
-from wpsv7client import get_chat_list, list_chat_messages, send_message
+**给某人发消息（完整流程）：**
 
-resp = get_chat_list()
-resp = send_message("chat_id", text="Hello")
-resp = list_chat_messages("chat_id")
+```python
+from wpsv7client import search_users, create_chat, send_message
+
+# 1. 按姓名搜索用户，获取 user_id
+resp = search_users("张冬")
+user_id = resp["data"]["items"][0]["id"]
+
+# 2. 创建单聊会话（p2p），注意 account_id_list 包含自己和对方
+resp = create_chat(account_id_list=["1498584513", user_id], chat_type="p2p")
+chat_id = resp["data"]["chat"]["id"]
+
+# 3. 发送消息（只需传 chat_id 和 text）
+resp = send_message(chat_id, text="1111")
+```
+
+其他 IM 功能：
+
+```python
+from wpsv7client import get_chat_list, list_chat_messages, send_message, list_recent_chats, search_chats
+
+resp = get_chat_list()              # 列出会话
+resp = list_recent_chats()          # 最近会话
+resp = search_chats("关键词")        # 搜索会话
+resp = list_chat_messages(chat_id)  # 列出消息
+resp = send_message(chat_id, text="Hello")           # 发送纯文本
+resp = send_message(chat_id, text="# 标题", text_type="markdown")  # 发送 markdown
 ```
 
 ## 时间格式
