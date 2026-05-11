@@ -29,7 +29,7 @@ curl -fsSL https://raw.githubusercontent.com/skyispainted/wps365-claude-plugin/m
 
 ## 首次使用
 
-首次使用时 AI 会引导你完成认证：提供企业 app_id → 打开浏览器登录 WPS → 完成。
+首次使用时 AI 会引导你完成认证：提供数字员工 app_id → 打开浏览器登录 WPS → 完成。
 `wps_sid` 会自动存储并在过期时无感刷新。
 
 ## 功能

@@ -33,7 +33,7 @@ python -m wps_credential_manager status
 
 如果显示"未配置"或"未找到凭证"，**先询问用户提供 app_id**：
 
-> 首次使用 WPS 365 需要认证。请提供你的 WPS 365 企业应用 App ID（格式如 `AK20260501LJGRPT`），可在 WPS 365 管理后台 → 开放平台获取。
+> 首次使用 WPS 365 需要认证。请提供你的 WPS 365 数字员工 App ID（格式如 `AK20260501LJGRPT`），可在 WPS 365 管理后台 → 开放平台获取。
 
 拿到 app_id 后执行：
 
