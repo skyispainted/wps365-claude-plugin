@@ -164,7 +164,7 @@ def login_local_oauth(app_id: str = "") -> dict:
         auth_url += f"&app_id={app_id}"
 
     is_remote = _is_remote_env()
-    callback_result: Optional[dict] = None
+    callback_result: dict = {}
     callback_event = threading.Event()
 
     # 尝试启动本地回调服务器（非远程环境）
@@ -243,29 +243,7 @@ def _start_callback_server(result_holder, event):
         def log_message(self, format, *args):
             pass  # suppress logs
 
-    # Find available port
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    try:
-        sock.bind(("127.0.0.1", PORT))
-        server = HTTPServer(("127.0.0.1", PORT), Handler)
-    except OSError:
-        sock.close()
-        # Try alternative port
-        for port in range(PORT + 1, PORT + 10):
-            try:
-                server = HTTPServer(("127.0.0.1", port), Handler)
-                break
-            except OSError:
-                continue
-        else:
-            raise OSError("No available port for OAuth callback")
-    finally:
-        try:
-            sock.close()
-        except Exception:
-            pass
-
-    return server
+    return HTTPServer(("127.0.0.1", PORT), Handler)
 
 
 def _exchange_code_for_token(app_id: str, code: str, state: str) -> dict:
