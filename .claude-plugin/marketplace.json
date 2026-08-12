@@ -8,7 +8,7 @@
   "plugins": [
     {
       "name": "wps365",
-      "description": "WPS 365 V7 API 工具集。用于查询通讯录、管理日历日程、创建会议、操作云文档、管理多维表、发送聊天消息等企业协作任务。",
+      "description": "WPS 365 企业协作 Skill，支持云文档、协作文档、日程、会议、通讯录、多维表和消息操作。",
       "author": {
         "name": "WPS 365 Team"
       },
