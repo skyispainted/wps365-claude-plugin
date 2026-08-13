@@ -7,6 +7,8 @@ description: Use when the user asks to work with WPS 365, WPS 云文档、协作
 
 Use the unified CLI for WPS 365 documents, calendars, meetings, contacts, DbSheet, and messages. Execute the user’s requested WPS operation; do not substitute generic instructions when the CLI can perform it.
 
+可见的领域入口：`/wps365:auth`、`/wps365:drive`、`/wps365:calendar`、`/wps365:meeting`、`/wps365:im`、`/wps365:base`、`/wps365:contact`。它们提供同一 CLI 的定向路由；`/wps365:wps365` 保留为完整的跨领域入口。
+
 ## 初始化（代理必须自主完成）
 
 当用户说“初始化”“配置 WPS 365”或首次要求 WPS 能力时，代理必须自主完成初始化，不得只把命令发给用户让其自行执行。除提供 App ID 和在浏览器中完成 WPS 授权外，不要求用户手动操作。
