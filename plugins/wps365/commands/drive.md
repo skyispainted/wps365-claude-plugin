@@ -1,6 +1,6 @@
 ---
-description: WPS 云文档操作：查看、搜索、读取、创建、上传、分享、标签、收藏和版本管理。适用于 WPS Drive / cloud documents。
-argument-hint: [例如：查看最近文档、搜索项目方案、分享文件]
+description: WPS 云文档 / 协作文档 / 金山文档：查看、搜索、读取、创建、上传、分享、标签、收藏和版本管理。以上名称含义相同。
+argument-hint: [例如：查看最近协作文档、搜索项目方案、分享文件]
 ---
 
 Use the WPS 365 Skill and unified CLI for the cloud-document task below.

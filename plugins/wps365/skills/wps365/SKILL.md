@@ -1,6 +1,6 @@
 ---
 name: wps365
-description: WPS 365 综合操作：云文档、协作文档、日历、会议、通讯录、多维表和消息。适用于 WPS 云文档 / 金山文档 / WPS Drive / calendar / meeting / contacts / DbSheet / IM。使用统一 `python -m wps365` CLI 执行请求；在 CLI 返回错误前不得声称无法访问 WPS。
+description: WPS 365 综合操作：WPS 云文档、协作文档、金山文档、WPS Drive；WPS 联系人、协作联系人、企业通讯录；WPS 日历、协作日历；WPS 会议、协作会议；WPS 多维表和协作消息。使用统一 `python -m wps365` CLI 执行请求；在 CLI 返回错误前不得声称无法访问 WPS。
 ---
 
 # WPS 365
@@ -8,6 +8,21 @@ description: WPS 365 综合操作：云文档、协作文档、日历、会议�
 Use the unified CLI for WPS 365 documents, calendars, meetings, contacts, DbSheet, and messages. Execute the user’s requested WPS operation; do not substitute generic instructions when the CLI can perform it.
 
 可见的领域入口：`/wps365:auth`、`/wps365:drive`、`/wps365:calendar`、`/wps365:meeting`、`/wps365:im`、`/wps365:base`、`/wps365:contact`。它们提供同一 CLI 的定向路由；`/wps365:wps365` 保留为完整的跨领域入口。
+
+## 同义名称路由
+
+以下表达含义相同，应直接路由到同一 WPS 能力，不要求用户换词或重复说明：
+
+| 用户表达 | 统一领域 |
+| --- | --- |
+| WPS 云文档、协作文档、金山文档、企业文档、WPS Drive | `drive` |
+| WPS 联系人、协作联系人、企业联系人、企业通讯录、同事 | `contact` |
+| WPS 日历、协作日历、WPS 日程、协作日程、我的日程 | `calendar` |
+| WPS 会议、协作会议、在线会议、预约会议、会议室 | `meeting` |
+| WPS 多维表、协作多维表、在线表格、DbSheet | `base` |
+| WPS 消息、协作消息、WPS 会话、聊天、群消息 | `im` |
+
+“协作”是 WPS 365 业务域的别名，不表示需要额外认证、切换账号或改用其他服务。
 
 ## 初始化（代理必须自主完成）
 

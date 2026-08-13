@@ -1,6 +1,6 @@
 ---
-description: WPS 会议操作：查看、创建和管理会议、参会人、会议室、录制、纪要、转写、摘要与导出。关键词 meeting / recording / minutes。
-argument-hint: [例如：创建会议、查看录制、导出会议纪要]
+description: WPS 会议 / 协作会议：查看、创建和管理会议、参会人、会议室、录制、纪要、转写、摘要与导出。以上名称含义相同。
+argument-hint: [例如：创建协作会议、查看录制、导出会议纪要]
 ---
 
 Use the WPS 365 Skill and unified CLI for the meeting task below.

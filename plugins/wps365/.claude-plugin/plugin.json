@@ -1,6 +1,6 @@
 {
   "name": "wps365",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "description": "WPS 365 企业协作 Skill：用于 WPS 云文档、协作文档、日程、会议、通讯录、多维表和消息操作。",
   "author": {"name": "WPS 365 Team"},
   "keywords": ["wps", "365", "calendar", "meeting", "drive", "im", "contacts", "dbsheet"]

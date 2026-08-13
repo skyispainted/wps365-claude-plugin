@@ -1,6 +1,6 @@
 ---
-description: WPS 企业通讯录：按姓名或部门搜索联系人，为日程、会议和消息操作解析人员。关键词 contacts / users / directory。
-argument-hint: [例如：搜索张三、查找某部门联系人]
+description: WPS 联系人 / 协作联系人 / 企业通讯录：按姓名或部门搜索人员，为日程、会议和消息操作解析成员。以上名称含义相同。
+argument-hint: [例如：搜索协作联系人张三、查找某部门成员]
 ---
 
 Use the WPS 365 Skill and unified CLI for the contact task below.
