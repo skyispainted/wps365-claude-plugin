@@ -5,7 +5,47 @@ description: Use when the user asks to work with WPS 365, WPS 云文档、协作
 
 # WPS 365
 
-Use this Skill to perform WPS 365 operations. The only common command entry point is:
+## 初始化（代理必须自主完成）
+
+当用户说“初始化”“配置 WPS 365”或首次要求 WPS 能力时，代理必须自主完成初始化，不得只把命令发给用户让其自行执行。除提供 App ID 和在浏览器中完成 WPS 授权外，不要求用户手动操作。
+
+### 执行流程
+
+1. 检查 Python、`cryptography` 和统一 CLI 是否可用；缺少 Python 依赖时自动安装到用户环境。
+2. 运行 `python -m wps365 auth status`，读取已保存的 App ID 和凭证状态；不得输出 App ID、SID、凭证文件内容或加密材料。
+3. 运行 `python -m wps365 auth status --verify` 验证现有凭证。只有 `verified: true` 才算认证有效；仅“已配置”但验证失败不能算初始化完成。
+4. 如果凭证有效，直接报告已完成并继续用户原始任务，不重复登录、不再次索要 App ID。
+5. 如果 SID 失效但已有 App ID，自动复用已保存 App ID，执行：
+
+```bash
+python -m wps365 auth login --flow local
+```
+
+6. 如果没有已保存的 App ID，只向用户询问 WPS 365 数字员工 App ID；取得后代理立即执行：
+
+```bash
+python -m wps365 auth login --flow local --app-id <app_id>
+```
+
+7. 本地授权命令运行期间保持等待。用户只需要在浏览器中完成 WPS 授权，不要要求用户复制 OAuth code、state 或 SID。
+8. OAuth 命令返回后立即执行：
+
+```bash
+python -m wps365 auth test
+```
+
+只有认证测试成功才报告初始化完成；认证失败时说明结构化错误，不要伪造成功。
+9. 初始化完成后继续执行用户最初请求的 WPS 任务，不要停在“初始化成功”而遗漏原任务。
+10. 初始化诊断失败时可执行：
+
+```bash
+python -m wps365 config doctor
+```
+
+**认证约束：** 使用 WPS 365 App ID 和现有加密凭证存储机制。不要安装、要求安装、提示开通或依赖 OpenClaw。
+
+## 常规操作
+
 
 ```bash
 python -m wps365 <domain> <+shortcut> [flags]

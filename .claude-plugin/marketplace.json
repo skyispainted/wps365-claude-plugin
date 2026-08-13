@@ -1,6 +1,6 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
-  "name": "wps365-marketplace",
+  "name": "skyispainted-wps365",
   "description": "WPS 365 V7 API 插件，集成通讯录、日历、会议、云文档、多维表、IM 等企业协作能力。",
   "owner": {
     "name": "WPS 365 Team"
