@@ -1,6 +1,6 @@
 ---
-description: Work with WPS 365 DbSheet tables, records, views, forms, and schema-aware data operations.
-argument-hint: [查询、创建、更新或删除多维表内容]
+description: WPS 多维表操作：查询、创建、更新和删除数据表、记录、视图与表单，按 schema 安全写入。关键词 DbSheet / records / table。
+argument-hint: [例如：查询多维表记录、创建数据表、更新表单]
 ---
 
 Use the WPS 365 Skill and unified CLI for the DbSheet task below.

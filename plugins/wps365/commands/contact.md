@@ -1,6 +1,6 @@
 ---
-description: Search WPS 365 enterprise contacts and resolve people for calendar, meeting, and messaging tasks.
-argument-hint: [姓名、部门或联系人查询]
+description: WPS 企业通讯录：按姓名或部门搜索联系人，为日程、会议和消息操作解析人员。关键词 contacts / users / directory。
+argument-hint: [例如：搜索张三、查找某部门联系人]
 ---
 
 Use the WPS 365 Skill and unified CLI for the contact task below.

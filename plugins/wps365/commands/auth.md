@@ -1,6 +1,6 @@
 ---
-description: Execute WPS 365 authentication, initialization, and credential diagnostics. Use the existing App ID flow and never use OpenClaw.
-argument-hint: [初始化、登录、检查或退出]
+description: WPS 365 认证与初始化：登录、凭证检查、诊断和退出。使用现有 App ID 流程，不使用 OpenClaw；关键词 auth / login / credentials。
+argument-hint: [例如：初始化、登录、检查认证状态]
 ---
 
 Use the WPS 365 Skill and unified CLI for authentication tasks.

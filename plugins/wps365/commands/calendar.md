@@ -1,6 +1,6 @@
 ---
-description: Work with WPS 365 calendars, events, attendees, availability, and calendar management.
-argument-hint: [查看、创建、修改或删除日历和日程]
+description: WPS 日历与日程：查看、创建、修改、删除日历和日程，管理参与者和忙闲时间。关键词 calendar / event / availability。
+argument-hint: [例如：查看今天日程、创建会议日程、查询空闲时间]
 ---
 
 Use the WPS 365 Skill and unified CLI for the calendar task below.

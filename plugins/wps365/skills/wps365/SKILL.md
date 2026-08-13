@@ -1,6 +1,6 @@
 ---
 name: wps365
-description: Use when the user asks to work with WPS 365, WPS 云文档、协作文档、金山文档, calendar, meeting, contacts, DbSheet, or WPS messages. Execute the requested operation with the unified `python -m wps365` CLI; do not claim WPS is inaccessible before the CLI returns an error.
+description: WPS 365 综合操作：云文档、协作文档、日历、会议、通讯录、多维表和消息。适用于 WPS 云文档 / 金山文档 / WPS Drive / calendar / meeting / contacts / DbSheet / IM。使用统一 `python -m wps365` CLI 执行请求；在 CLI 返回错误前不得声称无法访问 WPS。
 ---
 
 # WPS 365
