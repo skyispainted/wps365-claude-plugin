@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import tempfile
 from pathlib import Path
 from typing import Callable, Sequence
 
@@ -152,6 +153,34 @@ def contact(shortcut: str, arguments: Sequence[str]) -> dict:
 def calendar(shortcut: str, arguments: Sequence[str]) -> dict:
     parser = _parser(f"calendar {shortcut}")
     parser.add_argument("--calendar-id", default="primary")
+    if shortcut == "+calendar-list":
+        parser.add_argument("--page-size", type=int, default=20)
+        parser.add_argument("--page-token")
+        args = _parse(parser, arguments)
+        return _response(wps.list_calendars(page_size=args.page_size, page_token=args.page_token))
+    if shortcut == "+calendar-get":
+        parser.add_argument("calendar_id")
+        args = _parse(parser, arguments)
+        return _response(wps.get_calendar(args.calendar_id))
+    if shortcut == "+calendar-create":
+        parser.add_argument("--title", required=True)
+        parser.add_argument("--color", required=True)
+        parser.add_argument("--desc", default="")
+        args = _parse(parser, arguments)
+        return _response(wps.create_calendar(args.title, args.color, args.desc))
+    if shortcut == "+calendar-update":
+        parser.add_argument("calendar_id")
+        parser.add_argument("--title")
+        parser.add_argument("--color")
+        parser.add_argument("--desc")
+        args = _parse(parser, arguments)
+        if not any((args.title, args.color, args.desc)):
+            raise validation("请至少提供一个更新字段")
+        return _response(wps.update_calendar(args.calendar_id, summary=args.title, color=args.color, description=args.desc))
+    if shortcut == "+calendar-delete":
+        parser.add_argument("calendar_id")
+        args = _parse(parser, arguments)
+        return _response(wps.delete_calendar(args.calendar_id))
     if shortcut == "+agenda":
         parser.add_argument("--start", required=True)
         parser.add_argument("--end", required=True)
@@ -237,23 +266,153 @@ def meeting(shortcut: str, arguments: Sequence[str]) -> dict:
         parser.add_argument("--meeting-id", required=True)
         args = _parse(parser, arguments)
         return _response(wps.delete_meeting(args.meeting_id))
-    if shortcut == "+participants":
+    if shortcut in ("+participants", "+participant-list", "+participant-add", "+participant-remove"):
         parser.add_argument("--meeting-id", required=True)
-        parser.add_argument("--action", choices=("list", "add", "remove"), default="list")
+        parser.add_argument("--action", choices=("list", "add", "remove"))
         parser.add_argument("--ids")
         args = _parse(parser, arguments)
-        if args.action == "list":
+        action_by_shortcut = {
+            "+participant-list": "list",
+            "+participant-add": "add",
+            "+participant-remove": "remove",
+        }
+        action = action_by_shortcut.get(shortcut, args.action or "list")
+        if action == "list":
             return _response(wps.list_meeting_participants(args.meeting_id))
         ids = _csv(args.ids)
         if not ids:
             raise validation("添加或移除参会人时请提供 --ids")
-        function = wps.put_meeting_participants if args.action == "add" else wps.delete_meeting_participants
+        function = wps.put_meeting_participants if action == "add" else wps.delete_meeting_participants
         return _response(function(args.meeting_id, ids))
+    if shortcut == "+room-level-list":
+        parser.add_argument("--room-level-id")
+        parser.add_argument("--direct-access", action="store_true")
+        parser.add_argument("--page-size", type=int, default=20)
+        parser.add_argument("--page-token")
+        args = _parse(parser, arguments)
+        return _response(wps.list_meeting_room_levels(args.room_level_id, args.direct_access, args.page_size, args.page_token))
+    if shortcut == "+event-room-list":
+        parser.add_argument("--calendar-id", default="primary")
+        parser.add_argument("--event-id", required=True)
+        args = _parse(parser, arguments)
+        return _response(wps.list_event_meeting_rooms(args.calendar_id, args.event_id))
+    if shortcut == "+started-list":
+        parser.add_argument("--start", required=True)
+        parser.add_argument("--end", required=True)
+        parser.add_argument("--join-code")
+        parser.add_argument("--page-size", type=int, default=20)
+        parser.add_argument("--page-token")
+        args = _parse(parser, arguments)
+        return _response(wps.list_started_meetings(args.start, args.end, args.join_code, args.page_token, args.page_size))
+    if shortcut in ("+recording-list", "+minute-list"):
+        parser.add_argument("--meeting-id", required=True)
+        args = _parse(parser, arguments)
+        function = wps.meeting_get_recordings if shortcut == "+recording-list" else wps.meeting_get_minutes
+        return _response(function(args.meeting_id))
+    if shortcut in ("+recording-summary", "+recording-transcript"):
+        parser.add_argument("--meeting-id", required=True)
+        parser.add_argument("--recording-id", required=True)
+        args = _parse(parser, arguments)
+        function = wps.get_recording_summary if shortcut == "+recording-summary" else wps.get_recording_transcript
+        return _response(function(args.meeting_id, args.recording_id))
+    if shortcut in ("+minute-summary", "+minute-transcript"):
+        parser.add_argument("--meeting-id", required=True)
+        parser.add_argument("--minute-id", required=True)
+        args = _parse(parser, arguments)
+        function = wps.get_minute_summary if shortcut == "+minute-summary" else wps.get_minute_transcript
+        return _response(function(args.meeting_id, args.minute_id))
+    if shortcut == "+artifact-export":
+        parser.add_argument("--meeting-id", required=True)
+        parser.add_argument("--kind", choices=("recordings", "minutes"), required=True)
+        parser.add_argument("--output-dir", required=True)
+        parser.add_argument("--include", choices=("summary", "transcript", "both"), default="both")
+        args = _parse(parser, arguments)
+        output_dir = Path(args.output_dir).expanduser()
+        output_dir.mkdir(parents=True, exist_ok=True)
+        list_function = wps.meeting_get_recordings if args.kind == "recordings" else wps.meeting_get_minutes
+        artifact_id = "recording_id" if args.kind == "recordings" else "minute_id"
+        artifacts = _response(list_function(args.meeting_id)).get("items") or []
+        exported: list[str] = []
+        for index, artifact in enumerate(artifacts, start=1):
+            identifier = str(artifact.get("id") or artifact.get(artifact_id) or "")
+            if not identifier:
+                continue
+            payload = {"meeting_id": args.meeting_id, "kind": args.kind, "artifact": artifact}
+            if args.include in ("summary", "both"):
+                function = wps.get_recording_summary if args.kind == "recordings" else wps.get_minute_summary
+                payload["summary"] = _response(function(args.meeting_id, identifier))
+            if args.include in ("transcript", "both"):
+                function = wps.get_recording_transcript if args.kind == "recordings" else wps.get_minute_transcript
+                payload["transcript"] = _response(function(args.meeting_id, identifier))
+            target = output_dir / f"{args.kind}-{index:03d}-{identifier}.json"
+            if target.exists():
+                raise validation(f"导出文件已存在: {target}")
+            target.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+            exported.append(str(target))
+        return {"meeting_id": args.meeting_id, "kind": args.kind, "count": len(exported), "files": exported}
     raise validation(f"未知 meeting 快捷命令: {shortcut}")
 
 
 def drive(shortcut: str, arguments: Sequence[str]) -> dict:
     parser = _parser(f"drive {shortcut}")
+    if shortcut == "+recent":
+        parser.add_argument("--page-size", type=int, default=50)
+        parser.add_argument("--page-token")
+        args = _parse(parser, arguments)
+        return _response(wps.list_latest_items(page_size=args.page_size, page_token=args.page_token))
+    if shortcut == "+favorite-list":
+        parser.add_argument("--page-size", type=int, default=50)
+        parser.add_argument("--page-token")
+        args = _parse(parser, arguments)
+        return _response(wps.list_star_items(page_size=args.page_size, page_token=args.page_token))
+    if shortcut in ("+favorite-add", "+favorite-remove"):
+        parser.add_argument("file_ids", nargs="+")
+        args = _parse(parser, arguments)
+        function = wps.batch_create_star_items if shortcut == "+favorite-add" else wps.batch_delete_star_items
+        return _response(function(args.file_ids))
+    if shortcut == "+trash-list":
+        parser.add_argument("--drive")
+        parser.add_argument("--page-size", type=int, default=20)
+        parser.add_argument("--page-token")
+        args = _parse(parser, arguments)
+        drive_id = _drive_id(args.drive) if args.drive else None
+        return _response(wps.list_deleted_files(drive_id, page_size=args.page_size, page_token=args.page_token))
+    if shortcut == "+download-url":
+        parser.add_argument("--file-id", required=True)
+        parser.add_argument("--drive", default="private")
+        args = _parse(parser, arguments)
+        return _response(wps.get_file_download_url(_drive_id(args.drive), args.file_id))
+    if shortcut == "+name-check":
+        parser.add_argument("name")
+        parser.add_argument("--parent", default="root")
+        parser.add_argument("--drive", default="private")
+        args = _parse(parser, arguments)
+        return _response(wps.check_name_exists(_drive_id(args.drive), args.parent, args.name))
+    if shortcut == "+label-list":
+        parser.add_argument("--page-size", type=int, default=20)
+        parser.add_argument("--page-token")
+        args = _parse(parser, arguments)
+        return _response(wps.list_drive_labels(page_size=args.page_size, page_token=args.page_token))
+    if shortcut == "+label-get":
+        parser.add_argument("label_id")
+        args = _parse(parser, arguments)
+        return _response(wps.get_drive_label_meta(args.label_id))
+    if shortcut == "+label-create":
+        parser.add_argument("name")
+        args = _parse(parser, arguments)
+        return _response(wps.create_drive_label(args.name))
+    if shortcut == "+label-object-list":
+        parser.add_argument("label_id")
+        parser.add_argument("--page-size", type=int, default=20)
+        parser.add_argument("--page-token")
+        args = _parse(parser, arguments)
+        return _response(wps.list_drive_label_objects(args.label_id, page_size=args.page_size, page_token=args.page_token))
+    if shortcut in ("+label-add", "+label-remove"):
+        parser.add_argument("label_id")
+        parser.add_argument("file_ids", nargs="+")
+        args = _parse(parser, arguments)
+        function = wps.batch_add_drive_label_objects if shortcut == "+label-add" else wps.batch_remove_drive_label_objects
+        return _response(function(args.label_id, args.file_ids))
     if shortcut == "+list":
         parser.add_argument("--drive", default="private")
         parser.add_argument("--parent", default="root")
@@ -306,6 +465,49 @@ def drive(shortcut: str, arguments: Sequence[str]) -> dict:
             raise validation("统一写入当前仅支持智能文档 (.otl)", "其它格式请使用 `wps365 legacy drive write`。")
         wps.write_airpage_content(args.file_id, args.title or data.get("name") or "文档", args.content, pos="begin")
         return {"file_id": args.file_id, "written": True}
+    if shortcut in ("+overwrite", "+convert-overwrite"):
+        parser.add_argument("--file-id", required=True)
+        parser.add_argument("--drive", default="private")
+        parser.add_argument("--source")
+        parser.add_argument("--content")
+        parser.add_argument("--format", choices=("docx", "pdf"))
+        parser.add_argument("--template")
+        args = _parse(parser, arguments)
+        if shortcut == "+overwrite" and (not args.source or args.content or args.format):
+            raise validation("覆盖文档需要且仅接受 --source")
+        if shortcut == "+convert-overwrite" and bool(args.source) == bool(args.content):
+            raise validation("转换覆盖需要 --source 或 --content（二者只能选一个）")
+        if shortcut == "+convert-overwrite" and not args.format:
+            raise validation("转换覆盖需要 --format docx 或 --format pdf")
+        source = Path(args.source).expanduser() if args.source else None
+        if source and not source.is_file():
+            raise validation(f"文件不存在: {source}")
+        metadata = _response(wps.get_file_directly(args.file_id))
+        if str(metadata.get("name") or "").lower().endswith(".otl"):
+            raise validation(".otl 智能文档请使用 `drive file write`，不能使用版本覆盖")
+        drive_id = _drive_id(args.drive)
+        temporary_paths: list[Path] = []
+        try:
+            if shortcut == "+convert-overwrite":
+                if args.content is not None:
+                    handle = tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False, encoding="utf-8")
+                    handle.write(args.content)
+                    handle.close()
+                    source = Path(handle.name)
+                    temporary_paths.append(source)
+                converted = wps.convert_file(str(source), args.format, args.template if args.format == "docx" else None)
+                content = _response(converted)
+                if not isinstance(content, bytes):
+                    raise validation("文件转换未返回二进制内容")
+                handle = tempfile.NamedTemporaryFile(mode="wb", suffix=f".{args.format}", delete=False)
+                handle.write(content)
+                handle.close()
+                source = Path(handle.name)
+                temporary_paths.append(source)
+            return _response(wps.update_file(args.file_id, str(source), drive_id))
+        finally:
+            for temporary_path in temporary_paths:
+                temporary_path.unlink(missing_ok=True)
     if shortcut in ("+copy", "+move"):
         parser.add_argument("--file-id", required=True)
         parser.add_argument("--drive", default="private")
@@ -326,11 +528,17 @@ def drive(shortcut: str, arguments: Sequence[str]) -> dict:
         parser.add_argument("--file-id", required=True)
         parser.add_argument("--drive", default="private")
         parser.add_argument("--scope")
+        parser.add_argument("--role-id")
+        parser.add_argument("--opts")
+        parser.add_argument("--mode", default="pause")
         args = _parse(parser, arguments)
         drive_id = _drive_id(args.drive)
         if shortcut == "+share":
-            return _response(wps.open_file_link(drive_id, args.file_id, scope=args.scope))
-        return _response(wps.close_file_link(drive_id, args.file_id))
+            opts = _json(args.opts, "--opts") if args.opts else None
+            if opts is not None and not isinstance(opts, dict):
+                raise validation("--opts 必须是 JSON 对象")
+            return _response(wps.open_file_link(drive_id, args.file_id, opts=opts, role_id=args.role_id, scope=args.scope))
+        return _response(wps.close_file_link(drive_id, args.file_id, mode=args.mode))
     if shortcut == "+restore":
         parser.add_argument("--file-id", required=True)
         args = _parse(parser, arguments)
@@ -344,7 +552,43 @@ def base(shortcut: str, arguments: Sequence[str]) -> dict:
     if shortcut == "+schema":
         args = _parse(parser, arguments)
         return _response(wps.dbsheet_get_schema(args.file_id))
+    if shortcut == "+sheet-create":
+        parser.add_argument("--name")
+        parser.add_argument("--fields")
+        parser.add_argument("--views")
+        args = _parse(parser, arguments)
+        fields = _json(args.fields, "--fields") if args.fields else None
+        views = _json(args.views, "--views") if args.views else None
+        if fields is not None and not isinstance(fields, list):
+            raise validation("--fields 必须是字段数组")
+        if views is not None and not isinstance(views, list):
+            raise validation("--views 必须是视图数组")
+        return _response(wps.dbsheet_create_sheet(args.file_id, name=args.name, fields=fields, views=views))
     parser.add_argument("sheet_id", type=int)
+    if shortcut == "+sheet-update":
+        parser.add_argument("--name", required=True)
+        args = _parse(parser, arguments)
+        return _response(wps.dbsheet_update_sheet(args.file_id, args.sheet_id, name=args.name))
+    if shortcut == "+sheet-delete":
+        args = _parse(parser, arguments)
+        return _response(wps.dbsheet_delete_sheet(args.file_id, args.sheet_id))
+    if shortcut == "+view-create":
+        parser.add_argument("--name")
+        parser.add_argument("--type", choices=("Grid", "Kanban", "Gallery", "Form", "Gantt", "Query"))
+        args = _parse(parser, arguments)
+        return _response(wps.dbsheet_create_view(args.file_id, args.sheet_id, name=args.name, view_type=args.type))
+    if shortcut == "+form-get":
+        parser.add_argument("view_id")
+        args = _parse(parser, arguments)
+        return _response(wps.dbsheet_get_form_meta(args.file_id, args.sheet_id, args.view_id))
+    if shortcut == "+form-update":
+        parser.add_argument("view_id")
+        parser.add_argument("--name")
+        parser.add_argument("--desc")
+        args = _parse(parser, arguments)
+        if not any((args.name, args.desc)):
+            raise validation("请至少提供 --name 或 --desc")
+        return _response(wps.dbsheet_update_form_meta(args.file_id, args.sheet_id, args.view_id, name=args.name, description=args.desc))
     if shortcut == "+list":
         parser.add_argument("--page-size", type=int)
         parser.add_argument("--filter")
@@ -375,6 +619,26 @@ def base(shortcut: str, arguments: Sequence[str]) -> dict:
 
 def im(shortcut: str, arguments: Sequence[str]) -> dict:
     parser = _parser(f"im {shortcut}")
+    if shortcut == "+recent":
+        parser.add_argument("--page-size", type=int, default=50)
+        parser.add_argument("--page-token")
+        parser.add_argument("--start")
+        parser.add_argument("--end")
+        parser.add_argument("--unread", action="store_true")
+        parser.add_argument("--mention-me", action="store_true")
+        args = _parse(parser, arguments)
+        return _response(wps.list_recent_chats(page_size=args.page_size, page_token=args.page_token, start_time=args.start, end_time=args.end, filter_unread=args.unread, filter_mention_me=args.mention_me))
+    if shortcut == "+message-search":
+        parser.add_argument("keyword", nargs="?")
+        parser.add_argument("--chat-ids")
+        parser.add_argument("--sender-ids")
+        parser.add_argument("--start")
+        parser.add_argument("--end")
+        parser.add_argument("--page-size", type=int, default=20)
+        args = _parse(parser, arguments)
+        if not any((args.keyword, args.chat_ids, args.sender_ids, args.start, args.end)):
+            raise validation("全局搜索消息至少需要关键词、会话、发送者或时间范围")
+        return _response(wps.search_messages(args.keyword, page_size=args.page_size, chat_id_list=_csv(args.chat_ids), sender_id_list=_csv(args.sender_ids), start_time=args.start, end_time=args.end, with_sender_details=True))
     if shortcut == "+list":
         parser.add_argument("--page-size", type=int, default=50)
         args = _parse(parser, arguments)
@@ -393,6 +657,24 @@ def im(shortcut: str, arguments: Sequence[str]) -> dict:
         parser.add_argument("--end")
         args = _parse(parser, arguments)
         return _response(wps.list_chat_messages(args.chat_id, start_time=args.start, end_time=args.end, with_sender_details=True))
+    if shortcut in ("+send-rich", "+send-image", "+send-file", "+send-card"):
+        parser.add_argument("chat_id")
+        parser.add_argument("--json", required=True)
+        parser.add_argument("--quote-message-id")
+        args = _parse(parser, arguments)
+        payload = _json(args.json, "--json")
+        if not isinstance(payload, dict):
+            raise validation("--json 必须是 JSON 对象")
+        payload_by_shortcut = {
+            "+send-rich": ("rich_text", "rich_text"),
+            "+send-image": ("image", "image"),
+            "+send-file": ("file", "file"),
+            "+send-card": ("card", "card"),
+        }
+        message_type, field = payload_by_shortcut[shortcut]
+        if shortcut == "+send-file" and payload.get("type") not in ("local", "cloud"):
+            raise validation("文件消息必须包含 type: local 或 cloud")
+        return _response(wps.send_message(args.chat_id, msg_type=message_type, quote_msg_id=args.quote_message_id, **{field: payload}))
     if shortcut == "+send":
         parser.add_argument("chat_id")
         parser.add_argument("text")

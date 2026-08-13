@@ -6,7 +6,7 @@ from __future__ import annotations
 import sys
 from typing import Sequence
 
-from .catalog import BY_PATH, schema
+from .catalog import resolve, schema
 from .errors import WpsCliError, confirmation, validation
 from .handlers import HANDLERS, auth, config, whoami
 from .legacy import run as legacy_run
@@ -17,12 +17,14 @@ USAGE = """用法:
   python -m wps365 auth <status|login|refresh|logout|test> [flags]
   python -m wps365 config <status|doctor>
   python -m wps365 whoami
-  python -m wps365 schema [domain] [+shortcut]
+  python -m wps365 schema [domain] [command-path]
+  python -m wps365 <domain> <resource> <action> [flags]
   python -m wps365 <domain> <+shortcut> [flags]
   python -m wps365 legacy <domain> <legacy-command> [arguments]
 
 业务域: contact, calendar, meeting, drive, base, im
-所有常用命令默认输出机器可读 JSON；高风险操作先 --dry-run，用户明确确认后才追加 --yes。
+结构化子命令与既有 + 快捷命令等价；所有常用命令默认输出机器可读 JSON。
+高风险操作先 --dry-run，用户明确确认后才追加 --yes。
 """
 
 
@@ -55,40 +57,56 @@ def _validate_dry_run(domain: str, shortcut: str, arguments: Sequence[str]) -> N
     flags = _flag_values(arguments)
     required_flags = {
         ("calendar", "+delete"): {"--event-id"},
+        ("calendar", "+calendar-delete"): set(),
         ("meeting", "+cancel"): {"--meeting-id"},
         ("drive", "+move"): {"--file-id", "--dst-parent-id"},
+        ("drive", "+overwrite"): {"--file-id", "--source"},
+        ("drive", "+convert-overwrite"): {"--file-id", "--format"},
         ("drive", "+share"): {"--file-id"},
         ("drive", "+unshare"): {"--file-id"},
     }
     missing = sorted(flag for flag in required_flags.get((domain, shortcut), set()) if not flags.get(flag))
     if missing:
         raise validation(f"dry-run 缺少必填参数: {', '.join(missing)}")
+    if (domain, shortcut) == ("drive", "+convert-overwrite") and not (flags.get("--source") or flags.get("--content")):
+        raise validation("dry-run 需要 --source 或 --content")
     positionals = _positional_values(arguments)
-    if (domain, shortcut) == ("base", "+delete") and len(positionals) < 3:
-        raise validation("dry-run 需要 file_id、sheet_id 和至少一个 record_id")
-    if (domain, shortcut) == ("im", "+recall") and len(positionals) < 2:
-        raise validation("dry-run 需要 chat_id 和 message_id")
+    positional_requirements = {
+        ("calendar", "+calendar-delete"): (1, "dry-run 需要 calendar_id"),
+        ("base", "+delete"): (3, "dry-run 需要 file_id、sheet_id 和至少一个 record_id"),
+        ("base", "+sheet-delete"): (2, "dry-run 需要 file_id 和 sheet_id"),
+        ("im", "+recall"): (2, "dry-run 需要 chat_id 和 message_id"),
+    }
+    if (domain, shortcut) in positional_requirements:
+        minimum, message = positional_requirements[(domain, shortcut)]
+        if len(positionals) < minimum:
+            raise validation(message)
 
 
-def _business(domain: str, shortcut: str, arguments: Sequence[str]) -> tuple[dict, bool]:
-    spec = BY_PATH.get((domain, shortcut))
-    if not spec:
-        raise validation(f"未知快捷命令: {domain} {shortcut}", "运行 `python -m wps365 schema <domain>` 查看可用快捷命令。")
-    forwarded = list(arguments)
+def _business(domain: str, command_path: Sequence[str]) -> tuple[dict, bool]:
+    resolved = resolve(domain, command_path)
+    if not resolved:
+        raise validation(f"未知命令: {domain} {' '.join(command_path)}", f"运行 `python -m wps365 schema {domain}` 查看可用命令。")
+    spec, consumed = resolved
+    forwarded = list(command_path[consumed:])
     dry_run = "--dry-run" in forwarded
     confirmed = "--yes" in forwarded
     forwarded = [argument for argument in forwarded if argument not in {"--dry-run", "--yes"}]
     if dry_run:
-        _validate_dry_run(domain, shortcut, forwarded)
+        _validate_dry_run(domain, spec.shortcut, forwarded)
         return {
-            "command": {"domain": domain, "shortcut": shortcut},
+            "command": {
+                "domain": domain,
+                "shortcut": spec.shortcut,
+                "subcommand": list(spec.subcommand),
+            },
             "risk": spec.risk,
             "inputs": forwarded,
         }, True
     if spec.risk == "high-risk-write" and not confirmed:
-        raise confirmation(f"{domain} {shortcut}")
+        raise confirmation(" ".join(spec.invocation))
     try:
-        return HANDLERS[domain](shortcut, forwarded), False
+        return HANDLERS[domain](spec.shortcut, forwarded), False
     except ValueError as error:
         raise validation(str(error)) from error
 
@@ -104,9 +122,9 @@ def main(arguments: Sequence[str] | None = None) -> int:
             return _emit_help()
         root, *rest = args
         if root == "schema":
-            if len(rest) > 2:
-                raise validation("schema 最多接受 domain 和 +shortcut")
-            success(schema(*(rest + [None] * (2 - len(rest)))))
+            if len(rest) > 4:
+                raise validation("schema 最多接受 domain 和三段命令路径")
+            success(schema(*rest))
             return 0
         if root == "auth":
             success(auth(rest))
@@ -123,8 +141,8 @@ def main(arguments: Sequence[str] | None = None) -> int:
         if root not in HANDLERS:
             raise validation(f"未知命令域: {root}", "运行 `python -m wps365 schema` 查看可用命令域。")
         if not rest:
-            raise validation(f"{root} 需要快捷命令", f"运行 `python -m wps365 schema {root}` 查看可用命令。")
-        result, dry_run = _business(root, rest[0], rest[1:])
+            raise validation(f"{root} 需要命令", f"运行 `python -m wps365 schema {root}` 查看可用命令。")
+        result, dry_run = _business(root, rest)
         success(result, dry_run=dry_run)
         return 0
     except WpsCliError as error:
