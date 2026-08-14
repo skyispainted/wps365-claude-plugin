@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import sys
+from pathlib import Path
 from typing import Sequence
 
 from .catalog import resolve, schema
@@ -70,6 +71,9 @@ def _validate_dry_run(domain: str, shortcut: str, arguments: Sequence[str]) -> N
         raise validation(f"dry-run 缺少必填参数: {', '.join(missing)}")
     if (domain, shortcut) == ("drive", "+convert-overwrite") and not (flags.get("--source") or flags.get("--content")):
         raise validation("dry-run 需要 --source 或 --content")
+    source = flags.get("--source")
+    if source and (domain, shortcut) in {("drive", "+overwrite"), ("drive", "+convert-overwrite")} and not Path(source).expanduser().is_file():
+        raise validation(f"文件不存在: {source}")
     positionals = _positional_values(arguments)
     positional_requirements = {
         ("calendar", "+calendar-delete"): (1, "dry-run 需要 calendar_id"),
@@ -93,6 +97,8 @@ def _business(domain: str, command_path: Sequence[str]) -> tuple[dict, bool]:
     confirmed = "--yes" in forwarded
     forwarded = [argument for argument in forwarded if argument not in {"--dry-run", "--yes"}]
     if dry_run:
+        if spec.risk != "high-risk-write":
+            raise validation("--dry-run 仅适用于需要明确确认的高风险写操作")
         _validate_dry_run(domain, spec.shortcut, forwarded)
         return {
             "command": {

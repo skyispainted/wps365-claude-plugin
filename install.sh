@@ -37,6 +37,7 @@ info "插件已安装到 $CC_PLUGINS_DIR/wps365 ✓"
 info "正在安装 Python 包 ..."
 USER_SITE=$(python -c "import site; print(site.getusersitepackages())")
 mkdir -p "$USER_SITE"
+rm -rf "$USER_SITE/wpsv7client" "$USER_SITE/wps_credential_manager" "$USER_SITE/wps365"
 cp -a "$CC_PLUGINS_DIR/wps365/skills/wps365/scripts/wpsv7client" "$USER_SITE/"
 cp -a "$CC_PLUGINS_DIR/wps365/skills/wps365/scripts/wps_credential_manager" "$USER_SITE/"
 cp -a "$CC_PLUGINS_DIR/wps365/skills/wps365/scripts/wps365" "$USER_SITE/"
@@ -46,6 +47,7 @@ info "Python 包已安装到 $USER_SITE ✓"
 info "验证安装 ..."
 python -c "from wpsv7client import get_current_user; print('wps365 ready')" && info "wpsv7client 可用 ✓" || { error "wpsv7client 导入失败"; exit 1; }
 python -m wps365 schema &>/dev/null && info "统一 wps365 CLI 可用 ✓" || { error "统一 wps365 CLI 导入失败"; exit 1; }
+python -m wps365 schema im recent list &>/dev/null && info "IM 命令路由可用 ✓" || { error "已安装 CLI 缺少 IM 命令路由"; exit 1; }
 python -m wps_credential_manager status &>/dev/null && info "凭证管理器可用 ✓" || warn "凭证管理器需首次认证"
 [ -f "${HOME}/.claude/plugins/wps365/skills/wps365/SKILL.md" ] && info "SKILL.md 已注册 ✓" || error "SKILL.md 缺失"
 

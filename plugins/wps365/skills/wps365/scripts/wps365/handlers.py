@@ -32,6 +32,22 @@ def _parse(parser: ArgumentParser, arguments: Sequence[str]):
 
 
 def _response(response: dict) -> dict:
+    if not isinstance(response, dict) or response.get("code") is None:
+        raise WpsCliError(
+            "WPS API 返回了空或无效响应",
+            "network",
+            "invalid_response",
+            "稍后重试；不要重复执行非幂等写操作。",
+            retryable=True,
+        )
+    if response.get("code") == -1 and response.get("msg") == "response is not json":
+        raise WpsCliError(
+            "WPS API 返回了非 JSON 响应",
+            "network",
+            "invalid_response",
+            "稍后重试；不要重复执行非幂等写操作。",
+            retryable=True,
+        )
     error = from_response(response)
     if error:
         raise error
@@ -74,6 +90,39 @@ def _resolve_link(link_id: str, drive: str | None) -> tuple[str, str]:
     if not data.get("file_id"):
         raise validation("分享链接未返回 file_id")
     return str(data["file_id"]), str(data.get("drive_id") or _drive_id(drive))
+
+
+def _resolve_direct_file(file_id: str, drive: str | None) -> tuple[dict, str]:
+    data = _response(wps.get_file_directly(file_id, with_drive=True))
+    drive_data = data.get("drive")
+    drive_id = data.get("drive_id") or (
+        drive_data.get("id") if isinstance(drive_data, dict) else None
+    )
+    return data, str(drive_id or _drive_id(drive))
+
+
+def _drive_search_result(item: object) -> object:
+    if not isinstance(item, dict):
+        return item
+    result = dict(item)
+    file_src = result.get("file_src")
+    is_link_source = isinstance(file_src, dict) and file_src.get("type") == "link"
+    link_id = result.get("link_id")
+    file_id = result.get("id")
+    if is_link_source and link_id:
+        result["read_args"] = ["--link-id", str(link_id)]
+    elif file_id:
+        result["read_args"] = [str(file_id)]
+    elif link_id:
+        result["read_args"] = ["--link-id", str(link_id)]
+    return result
+
+
+def _drive_search_results(data: dict) -> dict:
+    items = data.get("items")
+    if not isinstance(items, list):
+        return data
+    return {**data, "items": [_drive_search_result(item) for item in items]}
 
 
 def auth(arguments: Sequence[str]) -> dict:
@@ -423,19 +472,31 @@ def drive(shortcut: str, arguments: Sequence[str]) -> dict:
         parser.add_argument("keyword")
         parser.add_argument("--type", choices=("file_name", "content", "all"), default="all")
         args = _parse(parser, arguments)
-        return _response(wps.search_files(args.keyword, search_type=args.type))
+        return _drive_search_results(_response(wps.search_files(args.keyword, search_type=args.type)))
     if shortcut in ("+get", "+read"):
         parser.add_argument("file_id", nargs="?")
         parser.add_argument("--link-id")
         parser.add_argument("--drive", default="private")
-        parser.add_argument("--format", choices=("plain", "markdown", "html", "kdc"), default="markdown")
+        parser.add_argument("--format", choices=("plain", "markdown", "html", "kdc"))
         args = _parse(parser, arguments)
         if bool(args.file_id) == bool(args.link_id):
             raise validation("请提供 file_id，或使用 --link-id 提供分享链接 ID（二者只能选一个）")
-        file_id, drive_id = (args.file_id, _drive_id(args.drive)) if args.file_id else _resolve_link(args.link_id, args.drive)
-        if shortcut == "+get":
-            return _response(wps.get_file(drive_id, file_id))
-        return _response(wps.get_file_content_extract(drive_id, file_id, format=args.format))
+        if args.file_id:
+            metadata, drive_id = _resolve_direct_file(args.file_id, args.drive)
+            if shortcut == "+get":
+                return metadata
+            file_id = args.file_id
+        else:
+            file_id, drive_id = _resolve_link(args.link_id, args.drive)
+            if shortcut == "+get":
+                return _response(wps.get_file(drive_id, file_id))
+        requested_format = args.format or "markdown"
+        try:
+            return _response(wps.get_file_content_extract(drive_id, file_id, format=requested_format))
+        except WpsCliError as error:
+            if args.format is None and error.category == "api":
+                return _response(wps.get_file_content_extract(drive_id, file_id, format="plain"))
+            raise
     if shortcut == "+create":
         parser.add_argument("name")
         parser.add_argument("--drive", default="private")
@@ -462,7 +523,7 @@ def drive(shortcut: str, arguments: Sequence[str]) -> dict:
         data = _response(response)
         name = str(data.get("name") or "").lower()
         if not name.endswith(".otl"):
-            raise validation("统一写入当前仅支持智能文档 (.otl)", "其它格式请使用 `wps365 legacy drive write`。")
+            raise validation("统一写入当前仅支持智能文档 (.otl)", "其它格式请使用 `drive +overwrite` 或 `drive +convert-overwrite`，并先完成 dry-run/确认流程。")
         wps.write_airpage_content(args.file_id, args.title or data.get("name") or "文档", args.content, pos="begin")
         return {"file_id": args.file_id, "written": True}
     if shortcut in ("+overwrite", "+convert-overwrite"):
@@ -590,10 +651,11 @@ def base(shortcut: str, arguments: Sequence[str]) -> dict:
             raise validation("请至少提供 --name 或 --desc")
         return _response(wps.dbsheet_update_form_meta(args.file_id, args.sheet_id, args.view_id, name=args.name, description=args.desc))
     if shortcut == "+list":
-        parser.add_argument("--page-size", type=int)
+        parser.add_argument("--page-size", type=int, default=20)
+        parser.add_argument("--page-token")
         parser.add_argument("--filter")
         args = _parse(parser, arguments)
-        return _response(wps.dbsheet_list_records(args.file_id, args.sheet_id, page_size=args.page_size, filter_body=_json(args.filter, "--filter") if args.filter else None))
+        return _response(wps.dbsheet_list_records(args.file_id, args.sheet_id, page_size=args.page_size, page_token=args.page_token, filter_body=_json(args.filter, "--filter") if args.filter else None))
     if shortcut == "+get":
         parser.add_argument("record_id")
         args = _parse(parser, arguments)

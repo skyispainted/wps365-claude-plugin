@@ -15,6 +15,9 @@ from .errors import WpsCliError, validation
 
 SCRIPTS_DIR = Path(__file__).resolve().parent.parent
 LEGACY_DOMAINS = {"calendar", "contacts", "dbsheet", "drive", "im", "meeting", "user-current"}
+BLOCKED_LEGACY_COMMANDS = {
+    ("im", "recall"): "legacy im recall 不具备统一 CLI 的确认保护；请使用 `wps365 im +recall <chat_id> <message_id> --yes`。",
+}
 
 
 def run(arguments: Sequence[str]) -> dict:
@@ -23,6 +26,8 @@ def run(arguments: Sequence[str]) -> dict:
     domain, command, *forwarded = arguments
     if domain not in LEGACY_DOMAINS:
         raise validation(f"未知 legacy 域: {domain}")
+    if message := BLOCKED_LEGACY_COMMANDS.get((domain, command)):
+        raise validation(message)
     script = SCRIPTS_DIR / domain / "run.py"
     if not script.is_file():
         raise WpsCliError(f"未找到 legacy 脚本: {domain}", "internal", "legacy_missing")

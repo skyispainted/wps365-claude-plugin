@@ -7,12 +7,14 @@ Use the WPS 365 Skill and unified CLI for the cloud-document task below.
 
 User request: $ARGUMENTS
 
-Prefer structured commands such as `drive directory list`, `drive file search/get/read`, `drive recent list`, `drive favorite list`, and `drive label ...`.
+Prefer `drive +list/+search/+get/+read`, `drive +recent`, `drive +favorite-*`, and `drive +label-*`.
 
 Rules:
-- Use an exact file ID directly; search only when the user supplied a name rather than an ID.
-- Resolve ambiguity before a write; never guess a file target.
-- Use `drive file write` only for `.otl` smart documents.
-- Use `drive file overwrite` or `drive file convert-overwrite` for non-`.otl` document versions; first use `--dry-run`, then require explicit confirmation before `--yes`.
+- Use an exact `link_id` with `drive +get/+read --link-id <link_id>`; `--link-id` requires a value.
+- Use an exact file ID directly only when it is a verified own-file reference.
+- After `drive +search`, reuse the selected result's `read_args` exactly. Shared-link results use `--link-id <link_id>`; do not assume their `id` is readable through the private drive.
+- Resolve ambiguity before reading or writing; never guess a file target or switch to a different search result after failure.
+- Use `drive +write` only for `.otl` smart documents.
+- Use `drive +overwrite` or `drive +convert-overwrite` for non-`.otl` document versions; first use `--dry-run`, then require explicit confirmation before `--yes`.
 - Treat move and share changes as high-risk. Pass fine-grained sharing parameters only when explicitly supplied.
 - Summarize results without exposing unnecessary private metadata.

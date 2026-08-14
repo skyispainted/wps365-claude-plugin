@@ -22,25 +22,10 @@ class WpsV7Client:
             except ImportError:
                 pass
         self._session = requests.Session()
-        self._sid_validated = False
-
-    def _ensure_sid_valid(self) -> None:
-        """惰性验证 sid，过期时自动刷新（每个客户端实例只执行一次）。"""
-        if self._sid_validated:
-            return
-        self._sid_validated = True
-        try:
-            from wps_credential_manager import auto_refresh_if_expired as _auto
-            if _auto():
-                from wps_credential_manager import get_sid as _gs
-                self.sid = _gs()
-        except Exception:
-            pass
 
     def _headers(self, content_type: str = "application/json") -> dict:
         if not self.sid:
-            raise ValueError("缺少用户凭证: 请设置环境变量 wps_sid 或 WPS_SID")
-        self._ensure_sid_valid()
+            raise ValueError("缺少用户凭证: 请先运行 `wps365 auth login` 或设置环境变量 wps_sid / WPS_SID")
         return {
             "Content-Type": content_type,
             "Origin": "https://365.kdocs.cn",

@@ -7,6 +7,6 @@ Use the WPS 365 Skill and unified CLI for the contact task below.
 
 User request: $ARGUMENTS
 
-Use `python -m wps365 contact user search <keyword>`.
+Use `wps365 contact +search <keyword>`.
 
 If multiple people match, present minimal disambiguation details and ask the user to choose before using a person in a write operation. Do not expose unrelated contact information.

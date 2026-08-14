@@ -11,6 +11,6 @@ Prefer `calendar calendar ...`, `calendar event ...`, and `calendar availability
 
 Rules:
 - Use timezone-aware ISO 8601 times, such as `2026-08-12T09:00:00+08:00`.
-- Resolve people with `contact user search` before adding attendees when an ID is unavailable.
+- Resolve people with `contact +search <name>` before adding attendees when an ID is unavailable.
 - Delete operations are high-risk: run `--dry-run`, show the target, then require explicit confirmation before `--yes`.
 - Do not reauthenticate unless the CLI returns an authentication error.

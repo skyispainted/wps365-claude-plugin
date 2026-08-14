@@ -7,11 +7,12 @@ Use the WPS 365 Skill and unified CLI for the messaging task below.
 
 User request: $ARGUMENTS
 
-Prefer `im chat ...`, `im recent list`, and `im message ...`.
+Prefer `im +list/+get/+search/+recent/+history/+message-search`.
 
 Rules:
-- Resolve an ambiguous chat before sending.
-- Use `im message send` for text; use `send-rich`, `send-image`, `send-file`, or `send-card` for explicit JSON payloads.
+- If a precise `chat_id` is already known, send directly. Otherwise resolve the person with `contact +search <name>`, then select only a `p2p` chat whose peer ID matches that contact; never guess a group chat.
+- Resolve an ambiguous person or chat before sending.
+- Use `im +send` for text; use `+send-rich`, `+send-image`, `+send-file`, or `+send-card` for explicit JSON payloads.
 - Do not invent `storage_key`, cloud-file metadata, mentions, or card fields. Use only user-provided or WPS-returned payload values.
 - Message recall is high-risk: dry-run first, then require explicit confirmation before `--yes`.
 - Do not disclose unrelated messages or chat metadata.
